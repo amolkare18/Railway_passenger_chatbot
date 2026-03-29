@@ -1,0 +1,10 @@
+groq
+PyPDF2
+sentence-transformers
+pinecone
+langdetect
+requests
+streamlit
+pandas
+numpy
+python-dotenv
