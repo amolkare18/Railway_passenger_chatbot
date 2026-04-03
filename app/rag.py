@@ -1,6 +1,7 @@
 import requests
 from groq import Groq
 from langdetect import detect
+from langsmith import traceable
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 
@@ -57,6 +58,7 @@ def load_pinecone():
     print(f"[rag] Connected to Pinecone. Total vectors: {stats['total_vector_count']}")
 
 
+@traceable(name="retrieve", metadata={"component": "retriever"})
 def retrieve(query_en):
     
     global _model, _pc_index
@@ -69,6 +71,7 @@ def retrieve(query_en):
     return [m["metadata"]["text"] for m in results["matches"]]
 
 
+@traceable(name="generate", metadata={"component": "llm"})
 def generate(query_en, chunks):
     context = "\n\n".join(chunks)
     client  = Groq(api_key=GROQ_API_KEY)
@@ -87,6 +90,7 @@ def generate(query_en, chunks):
     return resp.choices[0].message.content.strip()
 
 
+@traceable(name="answer_query")
 def answer_query(user_query, force_lang=None):
     lang      = force_lang or detect_lang(user_query)   # detect language
     query_en  = translate(user_query, lang, "en-IN")    # translate → English
@@ -97,5 +101,6 @@ def answer_query(user_query, force_lang=None):
         "lang":     lang,
         "query_en": query_en,
         "answer":   answer,
+        "context":  "\n\n".join(chunks),   # for LangSmith evaluators
         "chunks":   chunks,
     }

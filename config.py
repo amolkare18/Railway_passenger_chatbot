@@ -8,14 +8,31 @@ import os
 
 
 
-GROQ_API_KEY     = os.getenv("GROQ_API_KEY")
-SARVAM_API_KEY   = os.getenv("SARVAM_API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+import os
+import streamlit as st
+
+def get_secret(key):
+    try:
+        return st.secrets[key]   # Streamlit cloud
+    except:
+        return os.getenv(key)    # Local (.env)
+
+GROQ_API_KEY     = get_secret("GROQ_API_KEY")
+SARVAM_API_KEY   = get_secret("SARVAM_API_KEY")
+PINECONE_API_KEY = get_secret("PINECONE_API_KEY")
+LANGSMITH_API_KEY =os.getenv("LANGSMITH_API_KEY")
+LANGSMITH_PROJECT = "railway-bot-project"
+
+# LangSmith requires these as environment variables — set them immediately
+os.environ["LANGCHAIN_TRACING_V2"]  = "true"
+os.environ["LANGCHAIN_ENDPOINT"]    = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_API_KEY"]     = LANGSMITH_API_KEY
+os.environ["LANGCHAIN_PROJECT"]     = LANGSMITH_PROJECT
 
 # ── Pinecone Settings ──────────────────────────────────────────────
 PINECONE_INDEX  = "railway-bot"
 PINECONE_CLOUD  = "aws"
-PINECONE_REGION = "us-east-1"
+PINECONE_REGION = "ap-south-1 (Mumbai)"
 
 # ── Local Paths ────────────────────────────────────────────────────
 DATA_DIR        = "./data"           # put your PDFs here

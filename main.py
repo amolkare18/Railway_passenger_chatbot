@@ -5,7 +5,7 @@ from app.rag import load_pinecone, answer_query
 st.set_page_config(page_title="🚆 Railway Rights Bot", page_icon="🚆")
 st.title("🚆 Indian Railway Passenger Rights Chatbot")
 st.caption("Ask in Hindi, Tamil, Telugu, Bengali, or any Indian language!")
-
+st.write("Key exists:", "PINECONE_API_KEY" in st.secrets)
 
 @st.cache_resource(show_spinner="Loading... processing PDFs and connecting to Pinecone...")
 def startup():
