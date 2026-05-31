@@ -1,3 +1,7 @@
+import hashlib
+import json
+
+import redis
 import requests
 from groq import Groq
 from langdetect import detect
@@ -9,7 +13,8 @@ import sys; sys.path.append("..")
 from config import (
     GROQ_API_KEY, SARVAM_API_KEY,
     PINECONE_API_KEY, PINECONE_INDEX,
-    TOP_K, EMBED_MODEL, GROQ_MODEL
+    TOP_K, EMBED_MODEL, GROQ_MODEL,
+    REDIS_URL
 )
 
 
@@ -47,6 +52,30 @@ def translate(text, source_lang, target_lang):
 # ── Load once into memory ─────────────────────────────────────────
 _pc_index = None
 _model    = None
+_redis    = redis.from_url(REDIS_URL, decode_responses=True)
+
+
+def answer_en_cache_key(query_en):
+    normalized = query_en.strip().lower()
+    query_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return f"answer_en:v1:{query_hash}"
+
+
+def get_cached_answer_en(query_en):
+    try:
+        cached = _redis.get(answer_en_cache_key(query_en))
+        return json.loads(cached) if cached else None
+    except redis.RedisError as exc:
+        print(f"[redis] Cache read failed: {exc}")
+        return None
+
+
+def cache_answer_en(query_en, answer_en, chunks):
+    payload = {"answer_en": answer_en, "chunks": chunks}
+    try:
+        _redis.setex(answer_en_cache_key(query_en), 60 * 60 * 24, json.dumps(payload))
+    except redis.RedisError as exc:
+        print(f"[redis] Cache write failed: {exc}")
 
 
 def load_pinecone():
@@ -94,8 +123,16 @@ def generate(query_en, chunks):
 def answer_query(user_query, force_lang=None):
     lang      = force_lang or detect_lang(user_query)   # detect language
     query_en  = translate(user_query, lang, "en-IN")    # translate → English
-    chunks    = retrieve(query_en)                       # search Pinecone
-    answer_en = generate(query_en, chunks)               # Groq LLM
+
+    cached = get_cached_answer_en(query_en)
+    if cached:
+        answer_en = cached["answer_en"]
+        chunks = cached["chunks"]
+    else:
+        chunks    = retrieve(query_en)                   # search Pinecone
+        answer_en = generate(query_en, chunks)           # Groq LLM
+        cache_answer_en(query_en, answer_en, chunks)
+
     answer    = translate(answer_en, "en-IN", lang)      # translate back
     return {
         "lang":     lang,
