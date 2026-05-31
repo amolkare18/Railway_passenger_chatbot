@@ -23,8 +23,8 @@ def get_secret(key):
 GROQ_API_KEY     = get_secret("GROQ_API_KEY")
 SARVAM_API_KEY   = get_secret("SARVAM_API_KEY")
 PINECONE_API_KEY = get_secret("PINECONE_API_KEY")
-REDIS_URL = get_secret("REDIS_URL") or "redis://localhost:6379/0"
-LANGSMITH_API_KEY =os.getenv("LANGSMITH_API_KEY")
+REDIS_URL = get_secret("REDIS_URL") or os.getenv("REDIS_URL") or "redis://localhost:6379"
+LANGSMITH_API_KEY =get_secret("LANGSMITH_API_KEY")
 LANGSMITH_PROJECT = "railway-bot-project"
 
 # LangSmith requires these as environment variables — set them immediately
